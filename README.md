@@ -9,4 +9,3 @@ A production-ready Todo API built with Flask featuring JWT Authentication and Cl
 - 🐘 PostgreSQL database
 - ⚙️ Environment configuration
 - 🧪 Pytest testing
-- 📖 Swagger API documentation
