@@ -1,4 +1,5 @@
 from flask import Flask
+from .containers import Container
 from .infrastructure.database.db_connection import SessionLocal,engine
 from .infrastructure.database.models import Base,User
 def create_app():
@@ -6,13 +7,11 @@ def create_app():
 
    
     Base.metadata.create_all(bind=engine)
-
-
-    @app.route("/")
-    def home():
-        session = SessionLocal()
-        users = session.query(User).all()
-        print(users)
-        return "API is running"
+    
+    
+    container = Container()
+    container.wire(packages=["app"])
+    app.container = container
+    
 
     return app
