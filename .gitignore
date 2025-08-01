@@ -1,0 +1,44 @@
+# ملفات البيئة والمتغيرات السرية
+.env
+.env.local
+.env.*.local
+
+# كاش بايثون وملفات المترجم
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ملفات بيئات بايثون الافتراضية والمحلية
+venv/
+env/
+.venv/
+ENV/
+
+# ملفات إعدادات IDE (مثل PyCharm, VSCode)
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ملفات قاعدة البيانات المحلية (إذا كنت تستخدم SQLite)
+*.sqlite
+*.sqlite3
+
+# ملفات Logs والسجلات
+logs/
+*.log
+
+# ملفات التثبيت والبيلد
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ملفات الاختبارات والكاش
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ملفات نظام التشغيل
+.DS_Store
+Thumbs.db
