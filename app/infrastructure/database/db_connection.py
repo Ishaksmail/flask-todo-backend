@@ -10,10 +10,3 @@ DATABASE_URL = f"{os.getenv('DB_DRIVER')}://{os.getenv('DB_USER')}:{os.getenv('D
 engine = create_engine(DATABASE_URL, echo=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def get_db_session():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()

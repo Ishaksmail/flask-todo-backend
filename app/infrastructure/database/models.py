@@ -59,7 +59,6 @@ class Task(Base):
     completed_at = Column(DateTime, nullable=True)
     due_at = Column(DateTime, nullable=True)  
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=True)
 
@@ -75,3 +74,5 @@ class Group(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    tasks = relationship("Task", back_populates="group",lazy="dynamic",cascade="all, delete-orphan",order_by="Task.created_at")
