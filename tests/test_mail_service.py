@@ -8,6 +8,7 @@ load_dotenv()
 
 @pytest.fixture
 def mail_service():
+    
     return MailService(
         host=os.getenv("EMAIL_HOST"),
         port=os.getenv("EMAIL_PORT"),

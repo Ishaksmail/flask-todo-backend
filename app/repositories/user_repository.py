@@ -71,6 +71,7 @@ class UserRepository(IUserRepository):
             user_id=db_token.user_id
         )
     
+    @handle_db_errors
     def get_user(self, username: str):
         db_user = self.session.query(User).filter(User.username == username).first()
         if not db_user:
@@ -78,6 +79,8 @@ class UserRepository(IUserRepository):
         
         return self._convert_user_to_entity(db_user)
     
+    
+    @handle_db_errors
     def create_user(self, user_entity):
         existing_user = self.session.query(User).filter(
             User.username == user_entity.username
@@ -131,24 +134,65 @@ class UserRepository(IUserRepository):
         user_entity.id = db_user.id
         return user_entity
     
-    def update_user(self, user_entity):
-        db_user = self.session.query(User).filter(User.id == user_entity.id).first()
-        if not db_user:
+    @handle_db_errors
+    def update_password(self, id, new_password_hashing):
+        user = self.session.query(User).filter(User.id == id).first()
+        if not user:
             return None
-        
-        db_user.username = user_entity.username
-        db_user.password = user_entity.password
-        
+        user.password = newPassword_hashing
         self.session.commit()
-        self.session.refresh(db_user)
-        
-        return UserEntity(
-            id=db_user.id,
-            username=db_user.username,
-            password=db_user.password,
-            created_at=db_user.created_at
+        self.session.refresh(user)
+        return self._convert_user_to_entity(db_user=user)
+
+    @handle_db_errors
+    def update_username(self, old_username, new_username):
+        # البحث عن المستخدم الذي سنقوم بتحديثه
+        user = self.session.query(User).filter(User.username == old_username).first()
+        if not user:
+            return None
+
+        # التحقق إذا كان اسم المستخدم مستخدمًا بالفعل من قبل مستخدم آخر
+        existing_user = (
+            self.session.query(User)
+            .filter(User.username == newUsername)
+            .first()
         )
+        if existing_user:
+            return None
+
+        # تحديث اسم المستخدم
+        user.username = newUsername
+        self.session.commit()
+        self.session.refresh(user)
+        return self._convert_user_to_entity(db_user=user)
+
+
+        
+    @handle_db_errors
+    def get_verified_email(self, email_address):
+        
+        db_email = self.session.query(Email).filter(
+            Email.email_address == email_address,
+            Email.is_deleted == False
+        ).first()
+
+        if db_email:
+            
+            if db_email.verified_at:
+                return self._convert_email_to_entity(db_email)
+
+            alternative_email = self.session.query(Email).filter(
+                Email.user_id == db_email.user_id,
+                Email.is_deleted == False,
+                Email.verified_at.isnot(None)
+            ).order_by(Email.is_primary.desc()).first()
+
+            if alternative_email:
+                return self._convert_email_to_entity(alternative_email)
+
+        return None
     
+    @handle_db_errors
     def create_email(self, email_entity):
         db_email = Email(
             email_address=email_entity.email_address,
@@ -163,6 +207,7 @@ class UserRepository(IUserRepository):
         email_entity.id = db_email.id
         return email_entity
     
+    @handle_db_errors
     def delete_email(self, email_id):
         db_email = self.session.query(Email).filter(Email.id == email_id).first()
         if not db_email:
@@ -174,6 +219,7 @@ class UserRepository(IUserRepository):
         self.session.commit()
         return self._convert_email_to_entity(db_email)
     
+    @handle_db_errors
     def create_verified_email_token(self, token: VerifiedEmailTokenEntity):
         db_token = VerifiedEmailToken(
             token_hash=token.token_hash,
@@ -190,6 +236,34 @@ class UserRepository(IUserRepository):
         token.created_at = db_token.created_at
         return token
     
+    @handle_db_errors
+    def confirm_email(self, email_id, token_id):
+       
+        db_email = self.session.query(Email).filter(
+            Email.id == email_id,
+            Email.is_deleted == False
+        ).first()
+        if not db_email:
+            return None
+
+
+        db_email.verified_at = datetime.now(timezone.utc)
+
+     
+        db_token = self.session.query(VerifiedEmailToken).filter(
+            VerifiedEmailToken.id == token_id,
+            VerifiedEmailToken.is_used == False
+        ).first()
+        if db_token:
+            db_token.is_used = True
+            db_token.used_at = datetime.now(timezone.utc)
+
+      
+        self.session.commit()
+
+        return True
+    
+    @handle_db_errors
     def get_verified_email_token(self, email_address):
         db_email = self.session.query(Email).filter(
             Email.email_address == email_address
@@ -208,7 +282,7 @@ class UserRepository(IUserRepository):
             return None
             
         return self._convert_verified_token_to_entity(db_token)
-    
+    @handle_db_errors
     def create_password_reset_token(self, token: PasswordResetTokenEntity):
         db_token = PasswordResetToken(
             token_hash=token.token_hash,
@@ -224,6 +298,26 @@ class UserRepository(IUserRepository):
         token.created_at = db_token.created_at
         return token
     
+    @handle_db_errors
+    def confirm_password_reset_token(self, token_id: int):
+      
+        db_token = self.session.query(PasswordResetToken).filter(
+            PasswordResetToken.id == token_id,
+            PasswordResetToken.is_used == False
+        ).first()
+
+        if not db_token:
+            return None
+
+        db_token.is_used = True
+        db_token.used_at = datetime.now(timezone.utc)
+
+        self.session.commit()
+        self.session.refresh(db_token)
+
+        return self._convert_password_token_to_entity(db_token)
+    
+    @handle_db_errors
     def get_password_reset_token(self, token_hash):
         db_token = self.session.query(PasswordResetToken).filter(
             PasswordResetToken.token_hash == token_hash,

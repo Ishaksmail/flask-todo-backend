@@ -5,9 +5,9 @@ from typing import Optional
 
 class VerifiedEmailTokenEntity:
     def __init__(self, 
-                 id: Optional[int],
                  token_hash: str,
                  is_used: bool = False,
+                 id: Optional[int]=None,
                  expires_at: Optional[datetime] = None,
                  created_at: Optional[datetime] = None,
                  used_at: Optional[datetime] = None,

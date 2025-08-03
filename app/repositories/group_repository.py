@@ -1,16 +1,19 @@
-from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
-from ..interfaces.group_repository_interface import IGroupRepository
-from ..infrastructure.database.models import Group, Task
+
+from sqlalchemy.orm import Session
+
 from ..domain.entities.group_entity import GroupEntity
 from ..domain.entities.task_entity import TaskEntity
+from ..infrastructure.database.models import Group, Task
+from ..interfaces.group_repository_interface import IGroupRepository
+from ._decorator import handle_db_errors
 
-from datetime import datetime,timezone
+
 class GroupRepository(IGroupRepository):
     def __init__(self, session: Session):
         self.session = session
-    
+    @handle_db_errors
     def get_groups(self, user_id: int) -> List[GroupEntity]:
         
         db_groups = self.session.query(Group).filter(
@@ -19,7 +22,7 @@ class GroupRepository(IGroupRepository):
         ).order_by(Group.created_at.desc()).all()
         
         return [self._convert_to_group_entity(group) for group in db_groups]
-
+    @handle_db_errors
     def get_groups_uncomplete(self, user_id: int) -> List[GroupEntity]:
         
         db_groups = self.session.query(Group).filter(
@@ -32,7 +35,7 @@ class GroupRepository(IGroupRepository):
         ).order_by(Group.created_at.desc()).all()
         
         return [self._convert_to_group_entity(group, include_tasks=True) for group in db_groups]
-
+    @handle_db_errors
     def get_groups_complete(self, user_id: int) -> List[GroupEntity]:
         
         db_groups = self.session.query(Group).filter(
@@ -45,7 +48,7 @@ class GroupRepository(IGroupRepository):
         ).order_by(Group.created_at.desc()).all()
         
         return [self._convert_to_group_entity(group, include_tasks=True) for group in db_groups]
-
+    @handle_db_errors
     def create_group(self, group: GroupEntity) -> GroupEntity:
         
       
@@ -61,7 +64,7 @@ class GroupRepository(IGroupRepository):
         self.session.refresh(db_group)
         
         return self._convert_to_group_entity(db_group)
-
+    @handle_db_errors
     def update_group(self, group: GroupEntity) -> Optional[GroupEntity]:
       
         db_group = self.session.query(Group).filter(
@@ -78,7 +81,7 @@ class GroupRepository(IGroupRepository):
         
         self.session.commit()
         return self._convert_to_group_entity(db_group)
-
+    @handle_db_errors
     def delete_group(self, group_id: int) -> bool:
        
         db_group = self.session.query(Group).filter(

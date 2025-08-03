@@ -4,10 +4,10 @@ from typing import Optional
 
 class EmailEntity:
     def __init__(self, 
-                 id: Optional[int], 
                  email_address: str, 
                  is_primary: bool = False, 
                  is_deleted: bool = False,
+                 id: Optional[int]=None, 
                  deleted_at: Optional[datetime] = None,
                  verified_at: Optional[datetime] = None,
                  user_id: Optional[int] = None):

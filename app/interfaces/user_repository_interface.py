@@ -19,9 +19,6 @@ class IUserRepository(Protocol):
     def create_user(self, user_entity:UserEntity) -> UserEntity:
         ...
 
-    def update_user(self, user_entity:UserEntity) -> UserEntity:
-        ...
-        
     def create_email(self, email_entity: EmailEntity) -> EmailEntity:
         ...
     
@@ -31,14 +28,30 @@ class IUserRepository(Protocol):
     def create_verified_email_token(self, verified_email_token: VerifiedEmailTokenEntity) -> VerifiedEmailTokenEntity:
         ...
     
+    def confirm_email(self, email_id: int, token_id: int) -> Optional[bool]:
+        ...
+        
     def get_verified_email_token(self, email_address: str) -> Optional[VerifiedEmailTokenEntity]:
         ...
     
     def create_password_reset_token(self, password_reset_token: PasswordResetTokenEntity) -> PasswordResetTokenEntity:
         ...
+        
+    def confirm_password_reset_token(self, token_id: int) -> Optional[PasswordResetTokenEntity]:
+        ...
     
     def get_password_reset_token(self, token_hash: str) -> Optional[PasswordResetTokenEntity]:
         ...
+    
+    def get_verified_email(self,email_address:str)-> Optional[EmailEntity]:
+        ...
+    
+    def update_password (self,user_id:int,new_password_hashing:str)-> Optional[UserEntity]:
+        ...
+        
+    def update_username(slef,old_username:str,new_username:str) -> Optional[UserEntity]:
+        ...
+    
         
     # helper
     

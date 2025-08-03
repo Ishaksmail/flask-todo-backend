@@ -5,10 +5,10 @@ from .task_entity import TaskEntity
 
 class GroupEntity:
     def __init__(self,
-                 id: Optional[int],
                  name: str,
                  description: Optional[str] = None,
                  is_deleted: bool = False,
+                 id: Optional[int]=None,
                  deleted_at: Optional[datetime] = None,
                  created_at: Optional[datetime] = None,
                  updated_at: Optional[datetime] = None,

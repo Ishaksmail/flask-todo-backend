@@ -1,13 +1,14 @@
 # domain/entities/task_entity.py
-from datetime import datetime,timezone
+from datetime import datetime, timezone
 from typing import Optional
+
 
 class TaskEntity:
     def __init__(self,
-                 id: Optional[int],
                  text: str,
                  is_deleted: bool = False,
                  is_completed: bool = False,
+                 id: Optional[int]=None,
                  deleted_at: Optional[datetime] = None,
                  completed_at: Optional[datetime] = None,
                  due_at: Optional[datetime] = None,
