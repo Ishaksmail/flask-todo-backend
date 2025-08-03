@@ -1,6 +1,8 @@
 from typing import List, Optional, Protocol
 
-from app.domain.entities.group_entity import GroupEntity
+from ..domain.entities.group_entity import GroupEntity
+from ..domain.entities.task_entity import TaskEntity
+from ..infrastructure.database.models import Group, Task
 
 
 class IGroupRepository(Protocol):

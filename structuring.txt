@@ -1,0 +1,12 @@
+projects/
+    |
+    |_tests/
+    |    |_test_mail_service.py
+    |
+    |_app/
+        |_controllers/
+        |_domain/
+        |_infrastructure/
+        |_repositories/
+        |_services/
+        |_use_cases/

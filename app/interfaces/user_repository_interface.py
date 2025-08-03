@@ -7,6 +7,9 @@ from app.domain.entities.user_entity import UserEntity
 from app.domain.entities.verified_email_token_entity import \
     VerifiedEmailTokenEntity
 
+from ..infrastructure.database.models import (Email, PasswordResetToken, User,
+                                              VerifiedEmailToken)
+
 
 class IUserRepository(Protocol):
     

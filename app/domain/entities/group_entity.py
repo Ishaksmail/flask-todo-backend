@@ -1,6 +1,6 @@
 # domain/entities/group_entity.py
 from datetime import datetime
-from typing import Optional
+from typing import Optional,List
 from .task_entity import TaskEntity
 
 class GroupEntity:

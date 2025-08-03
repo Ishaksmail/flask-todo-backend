@@ -18,7 +18,7 @@ class UserRepository(IUserRepository):
     def __init__(self, session: Session):
         self.session = session
         
-    def _convert_user_to_entity(self, db_user: User):
+    def _convert_user_to_entity(self, db_user):
         
         db_emails = self.session.query(Email).filter(
             Email.user_id == db_user.id,
@@ -37,7 +37,7 @@ class UserRepository(IUserRepository):
         
         return user_entity
     
-    def _convert_email_to_entity(self, db_email: Email) -> EmailEntity:
+    def _convert_email_to_entity(self, db_email):
         return EmailEntity(
             id=db_email.id,
             email_address=db_email.email_address,
@@ -48,7 +48,7 @@ class UserRepository(IUserRepository):
             user_id=db_email.user_id
         )
     
-    def _convert_verified_token_to_entity(self, db_token: VerifiedEmailToken) -> VerifiedEmailTokenEntity:
+    def _convert_verified_token_to_entity(self, db_token):
         return VerifiedEmailTokenEntity(
             id=db_token.id,
             token_hash=db_token.token_hash,
@@ -60,7 +60,7 @@ class UserRepository(IUserRepository):
             user_id=db_token.user_id
         )
     
-    def _convert_password_token_to_entity(self, db_token: PasswordResetToken) -> PasswordResetTokenEntity:
+    def _convert_password_token_to_entity(self, db_token):
         return PasswordResetTokenEntity(
             id=db_token.id,
             token_hash=db_token.token_hash,
@@ -78,7 +78,7 @@ class UserRepository(IUserRepository):
         
         return self._convert_user_to_entity(db_user)
     
-    def create_user(self, user_entity: UserEntity):
+    def create_user(self, user_entity):
         existing_user = self.session.query(User).filter(
             User.username == user_entity.username
         ).first()
@@ -131,7 +131,7 @@ class UserRepository(IUserRepository):
         user_entity.id = db_user.id
         return user_entity
     
-    def update_user(self, user_entity: UserEntity):
+    def update_user(self, user_entity):
         db_user = self.session.query(User).filter(User.id == user_entity.id).first()
         if not db_user:
             return None
@@ -149,7 +149,7 @@ class UserRepository(IUserRepository):
             created_at=db_user.created_at
         )
     
-    def create_email(self, email_entity: EmailEntity):
+    def create_email(self, email_entity):
         db_email = Email(
             email_address=email_entity.email_address,
             is_primary=email_entity.is_primary,
@@ -163,7 +163,7 @@ class UserRepository(IUserRepository):
         email_entity.id = db_email.id
         return email_entity
     
-    def delete_email(self, email_id: int):
+    def delete_email(self, email_id):
         db_email = self.session.query(Email).filter(Email.id == email_id).first()
         if not db_email:
             return None
@@ -190,7 +190,7 @@ class UserRepository(IUserRepository):
         token.created_at = db_token.created_at
         return token
     
-    def get_verified_email_token(self, email_address: str):
+    def get_verified_email_token(self, email_address):
         db_email = self.session.query(Email).filter(
             Email.email_address == email_address
         ).first()
@@ -224,7 +224,7 @@ class UserRepository(IUserRepository):
         token.created_at = db_token.created_at
         return token
     
-    def get_password_reset_token(self, token_hash: str) -> Optional[PasswordResetTokenEntity]:
+    def get_password_reset_token(self, token_hash):
         db_token = self.session.query(PasswordResetToken).filter(
             PasswordResetToken.token_hash == token_hash,
             PasswordResetToken.is_used == False,

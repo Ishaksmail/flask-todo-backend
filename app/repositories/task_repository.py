@@ -1,6 +1,9 @@
 from sqlalchemy.orm import Session
 
+from ..infrastructure.database.models import Task
+from ..domain.entities.task_entity import TaskEntity
 from ..interfaces.task_repository_interface import ITaskRepository
+from ._decorator import handle_db_errors
 
 
 class TaskRepository(ITaskRepository):
