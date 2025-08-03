@@ -1,5 +1,5 @@
 # domain/entities/task_entity.py
-from datetime import datetime
+from datetime import datetime,timezone
 from typing import Optional
 
 class TaskEntity:
@@ -21,6 +21,6 @@ class TaskEntity:
         self.deleted_at = deleted_at
         self.completed_at = completed_at
         self.due_at = due_at
-        self.created_at = created_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(timezone.utc)
         self.user_id = user_id
         self.group_id = group_id

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime,timezone
 from typing import Optional, List
 from .email_entity import EmailEntity
 
@@ -12,5 +12,5 @@ class UserEntity:
         self.id = id
         self.username = username
         self.password = password
-        self.created_at = created_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(timezone.utc)
         self.emails = emails or []

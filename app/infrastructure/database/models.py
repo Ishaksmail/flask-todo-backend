@@ -62,6 +62,8 @@ class Task(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=True)
+    
+    group = relationship("Group", back_populates="tasks")
 
 
 class Group(Base):

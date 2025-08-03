@@ -17,7 +17,7 @@ class VerifiedEmailTokenEntity:
         self.token_hash = token_hash
         self.is_used = is_used
         self.expires_at = expires_at
-        self.created_at = created_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(timezone.utc)
         self.used_at = used_at
         self.email_id = email_id
         self.user_id = user_id

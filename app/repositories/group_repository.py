@@ -6,6 +6,7 @@ from ..infrastructure.database.models import Group, Task
 from ..domain.entities.group_entity import GroupEntity
 from ..domain.entities.task_entity import TaskEntity
 
+from datetime import datetime,timezone
 class GroupRepository(IGroupRepository):
     def __init__(self, session: Session):
         self.session = session
@@ -52,7 +53,7 @@ class GroupRepository(IGroupRepository):
             name=group.name,
             description=group.description,
             user_id=group.user_id,
-            created_at=group.created_at or datetime.utcnow()
+            created_at=group.created_at or datetime.now(timezone.utc)
         )
         
         self.session.add(db_group)
@@ -73,7 +74,7 @@ class GroupRepository(IGroupRepository):
             
         db_group.name = group.name
         db_group.description = group.description
-        db_group.updated_at = datetime.utcnow()
+        db_group.updated_at = datetime.now(timezone.utc)
         
         self.session.commit()
         return self._convert_to_group_entity(db_group)
@@ -89,11 +90,11 @@ class GroupRepository(IGroupRepository):
             return False
             
         db_group.is_deleted = True
-        db_group.deleted_at = datetime.utcnow()
+        db_group.deleted_at = datetime.now(timezone.utc)
         
         for task in db_group.tasks:
             task.is_deleted = True
-            task.deleted_at = datetime.utcnow()
+            task.deleted_at = datetime.now(timezone.utc)
         
         self.session.commit()
         return True

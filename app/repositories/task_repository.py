@@ -4,6 +4,7 @@ from ..infrastructure.database.models import Task
 from ..domain.entities.task_entity import TaskEntity
 from ..interfaces.task_repository_interface import ITaskRepository
 from ._decorator import handle_db_errors
+from datetime import datetime,timezone
 
 
 class TaskRepository(ITaskRepository):
@@ -45,7 +46,7 @@ class TaskRepository(ITaskRepository):
             return None
             
         db_task.is_completed = True
-        db_task.completed_at = datetime.utcnow()
+        db_task.completed_at = datetime.now(timezone.utc)
         
         self.session.commit()
         self.session.refresh(db_task)
@@ -83,7 +84,7 @@ class TaskRepository(ITaskRepository):
             return False
             
         db_task.is_deleted = True
-        db_task.deleted_at = datetime.utcnow()
+        db_task.deleted_at = datetime.now(timezone.utc)
         
         self.session.commit()
         return True

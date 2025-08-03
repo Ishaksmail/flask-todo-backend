@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -90,7 +90,7 @@ class UserRepository(IUserRepository):
         db_user = User(
             username=user_entity.username,
             password=user_entity.password,
-            created_at=user_entity.created_at or datetime.utcnow()
+            created_at=user_entity.created_at or datetime.now(timezone.utc)
         )
         
         self.session.add(db_user)
@@ -113,7 +113,7 @@ class UserRepository(IUserRepository):
                 email_address=email_entity.email_address,
                 is_primary=email_entity.is_primary,
                 user_id=db_user.id,
-                verified_at=datetime.utcnow()
+                verified_at=datetime.now(timezone.utc)
             )
             
             self.session.add(db_email)
@@ -169,7 +169,7 @@ class UserRepository(IUserRepository):
             return None
         
         db_email.is_deleted = True
-        db_email.deleted_at = datetime.utcnow()
+        db_email.deleted_at = datetime.now(timezone.utc)
         
         self.session.commit()
         return self._convert_email_to_entity(db_email)
@@ -201,7 +201,7 @@ class UserRepository(IUserRepository):
         db_token = self.session.query(VerifiedEmailToken).filter(
             VerifiedEmailToken.email_id == db_email.id,
             VerifiedEmailToken.is_used == False,
-            VerifiedEmailToken.expires_at > datetime.utcnow()
+            VerifiedEmailToken.expires_at > datetime.now(timezone.utc)
         ).order_by(VerifiedEmailToken.created_at.desc()).first()
         
         if not db_token:
@@ -228,7 +228,7 @@ class UserRepository(IUserRepository):
         db_token = self.session.query(PasswordResetToken).filter(
             PasswordResetToken.token_hash == token_hash,
             PasswordResetToken.is_used == False,
-            PasswordResetToken.expires_at > datetime.utcnow()
+            PasswordResetToken.expires_at > datetime.now(timezone.utc)
         ).first()
         
         if not db_token:
