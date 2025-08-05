@@ -1,8 +1,7 @@
-from datetime import datetime, timedelta
-
-from app.repositories.user_repository import UserRepository
-from app.services.password_hashing_service import PasswordHashingService
-from app.services.token_service import TokenService
+from ...repositories.user_repository import UserRepository
+from ...services.password_hashing_service import PasswordHashingService
+from ...services.token_service import TokenService
+from ...constants.error_messages import ERROR_MESSAGES
 
 
 class LoginUseCase:
@@ -15,26 +14,38 @@ class LoginUseCase:
         self.token_service = token_service
 
     def execute(self, username: str, password: str):
-        # 1️⃣ التحقق من إدخال الحقول
+    
         if not username or not password:
-            raise ValueError("اسم المستخدم وكلمة المرور مطلوبان")
+            raise ValueError(ERROR_MESSAGES["USERNAME_AND_PASSWORD_REQUIRED"])
+        
+      
 
         # 2️⃣ جلب المستخدم من قاعدة البيانات
-        user = self.user_repo.get_user(username)
+        user = self.user_repo.get_user(username = username)
+        
+      
+        print(user)
+        
         if not user:
-            raise ValueError("اسم المستخدم أو كلمة المرور غير صحيحة")
+            raise ValueError(ERROR_MESSAGES["INVALID_CREDENTIALS"])
+        
+      
 
         # 3️⃣ التحقق من كلمة المرور
         if not self.hashing_service.verify_password(password, user.password):
-            raise ValueError("اسم المستخدم أو كلمة المرور غير صحيحة")
+            raise ValueError(ERROR_MESSAGES["INVALID_CREDENTIALS"])
 
         # 4️⃣ التحقق من وجود بريد إلكتروني رئيسي ومؤكد
         primary_email = next((email for email in user.emails if email.is_primary and not email.is_deleted), None)
         if not primary_email:
-            raise ValueError("لا يوجد بريد إلكتروني أساسي نشط لهذا الحساب")
+            raise ValueError(ERROR_MESSAGES["NO_ACTIVE_PRIMARY_EMAIL"])
+
+      
 
         if not primary_email.verified_at:
-            raise ValueError("يجب تأكيد البريد الإلكتروني قبل تسجيل الدخول")
-
+            raise ValueError(ERROR_MESSAGES["EMAIL_NOT_VERIFIED"])
+        
+        print('----------------------------------------------')
+        
 
         return user

@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta, timezone
 
-from app.domain.entities.password_reset_token_entity import \
-    PasswordResetTokenEntity
-from app.interfaces.user_repository_interface import IUserRepository
-from app.services.mail_service import MailService
-from app.services.token_service import TokenService
+from ...domain.entities.password_reset_token_entity import PasswordResetTokenEntity
+from ...interfaces.user_repository_interface import IUserRepository
+from ...services.mail_service import MailService
+from ...services.token_service import TokenService
+from ...constants.error_messages import ERROR_MESSAGES
 
 
 class ForgotPasswordUseCase:
@@ -19,25 +19,29 @@ class ForgotPasswordUseCase:
         self.base_url = base_url
 
     def execute(self, email: str):
-       
+        # 1️⃣ التحقق من الإدخال
         if not email:
-            raise ValueError("البريد الإلكتروني مطلوب")
+            raise ValueError(ERROR_MESSAGES["EMAIL_REQUIRED"])
 
-       
+        # 2️⃣ التحقق من وجود البريد الإلكتروني المؤكد
         db_email = self.user_repo.get_verified_email(email_address=email)
-
         if not db_email:
-            raise ValueError("لا يوجد بريد إلكتروني مؤكد مرتبط بهذا الحساب")
-        
-        user_id = db_email.user_id
-        raw_token, token_hash, expires = self.token_service.generate_token(
-            email=email,
-            user_id=user_id,
-            token_type="reset_password",
-            expires_delta=timedelta(hours=1)
-        )
+            raise ValueError(ERROR_MESSAGES["EMAIL_NOT_VERIFIED"])
 
-      
+        user_id = db_email.user_id
+
+        # 3️⃣ إنشاء التوكن
+        try:
+            raw_token, token_hash, expires = self.token_service.generate_token(
+                email=email,
+                user_id=user_id,
+                token_type="reset_password",
+                expires_delta=timedelta(hours=1)
+            )
+        except Exception:
+            raise ValueError(ERROR_MESSAGES["TOKEN_GENERATION_FAILED"])
+
+        # 4️⃣ حفظ التوكن في قاعدة البيانات
         token_entity = PasswordResetTokenEntity(
             token_hash=token_hash,
             is_used=False,
@@ -45,26 +49,28 @@ class ForgotPasswordUseCase:
             created_at=datetime.now(timezone.utc),
             user_id=user_id
         )
-
         self.user_repo.create_password_reset_token(token_entity)
 
-      
+        # 5️⃣ إنشاء الرابط
         reset_link = f"{self.base_url}/reset-password?token={raw_token}"
 
-     
-        self.mail_service.send_email(
-            subject="إعادة تعيين كلمة المرور",
+        # 6️⃣ إرسال البريد الإلكتروني
+        email_sent = self.mail_service.send_email(
+            subject="Password Reset Request",
             receivers=[email],
             message=(
-                f"مرحباً،\n\n"
-                f"لقد طلبت إعادة تعيين كلمة المرور الخاصة بحسابك.\n"
-                f"يمكنك تعيين كلمة مرور جديدة عبر الرابط التالي:\n{reset_link}\n\n"
-                f"هذا الرابط صالح لمدة ساعة واحدة فقط."
+                f"Hello,\n\n"
+                f"You requested to reset your password.\n"
+                f"Please click the link below to set a new password:\n{reset_link}\n\n"
+                f"This link is valid for one hour only."
             )
         )
 
+        if not email_sent:
+            raise ValueError(ERROR_MESSAGES["EMAIL_SEND_FAILED"])
+
         # 7️⃣ إعادة الاستجابة
         return {
-            "message": "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني",
+            "message": ERROR_MESSAGES["PASSWORD_RESET_LINK_SENT"],
             "reset_token": raw_token
         }

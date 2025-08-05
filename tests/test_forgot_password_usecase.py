@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from app.use_cases.users.forgot_password_usecase import ForgotPasswordUseCase
 from app.domain.entities.password_reset_token_entity import PasswordResetTokenEntity
 from app.domain.entities.email_entity import EmailEntity
+from app.constants.error_messages import ERROR_MESSAGES
 
 
 class FakeUserRepo:
@@ -51,13 +52,13 @@ def setup_usecase():
 def test_forgot_password_success(setup_usecase):
     usecase, user_repo, mail_service = setup_usecase
 
-    response = usecase.execute("test@example.com")
+    response = usecase.execute(email = "test@example.com")
 
-    assert response["message"] == "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني"
+    assert response["message"] == ERROR_MESSAGES["PASSWORD_RESET_LINK_SENT"]
     assert response["reset_token"] == "raw_token_123"
     assert user_repo.token_created is not None
     assert mail_service.sent_email is not None
-    assert "إعادة تعيين كلمة المرور" in mail_service.sent_email["subject"]
+    assert "Password Reset Request" in mail_service.sent_email["subject"]
 
 
 def test_forgot_password_no_email_found():
@@ -66,12 +67,12 @@ def test_forgot_password_no_email_found():
     mail_service = FakeMailService()
     usecase = ForgotPasswordUseCase(user_repo, token_service, mail_service, base_url="https://testapp.com")
 
-    with pytest.raises(ValueError, match="لا يوجد بريد إلكتروني مؤكد مرتبط بهذا الحساب"):
+    with pytest.raises(ValueError, match=ERROR_MESSAGES["EMAIL_NOT_VERIFIED"]):
         usecase.execute("notfound@example.com")
 
 
 def test_forgot_password_empty_email(setup_usecase):
     usecase, _, _ = setup_usecase
 
-    with pytest.raises(ValueError, match="البريد الإلكتروني مطلوب"):
+    with pytest.raises(ValueError, match=ERROR_MESSAGES["EMAIL_REQUIRED"]):
         usecase.execute("")

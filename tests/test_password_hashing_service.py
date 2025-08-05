@@ -1,25 +1,57 @@
 import pytest
+import bcrypt
 from app.services.password_hashing_service import PasswordHashingService
+from app.constants.error_messages import ERROR_MESSAGES
+
 
 @pytest.fixture
-def hashing_service():
+def password_service_no_pepper():
+    return PasswordHashingService()
+
+
+@pytest.fixture
+def password_service_with_pepper():
     return PasswordHashingService(pepper="mysecretpepper")
 
-def test_hash_and_verify_password_success(hashing_service):
-    password = "SecurePassword123"
-    hashed = hashing_service.hash_password(password)
-    
-    assert hashed != password  # يجب ألا يكون نفس النص
-    assert hashing_service.verify_password(password, hashed) is True
 
-def test_verify_password_failure_wrong_password(hashing_service):
-    password = "SecurePassword123"
-    hashed = hashing_service.hash_password(password)
-    
-    assert hashing_service.verify_password("WrongPassword", hashed) is False
+def test_hash_password_success(password_service_no_pepper):
+    password = "strongpass123"
+    hashed = password_service_no_pepper.hash_password(password)
 
-def test_verify_password_failure_invalid_hash(hashing_service):
-    password = "SecurePassword123"
-    invalid_hash = "not_a_real_hash"
-    
-    assert hashing_service.verify_password(password, invalid_hash) is False
+    assert isinstance(hashed, str)
+    assert bcrypt.checkpw(password.encode(), hashed.encode())
+
+
+def test_hash_password_with_pepper(password_service_with_pepper):
+    password = "strongpass123"
+    hashed = password_service_with_pepper.hash_password(password)
+
+    combined = (password + "mysecretpepper").encode()
+    assert bcrypt.checkpw(combined, hashed.encode())
+
+
+def test_hash_password_invalid_length(password_service_no_pepper):
+    with pytest.raises(ValueError) as exc:
+        password_service_no_pepper.hash_password("short")
+    assert str(exc.value) == ERROR_MESSAGES["INVALID_PASSWORD_LENGTH"]
+
+
+def test_verify_password_success(password_service_no_pepper):
+    password = "strongpass123"
+    hashed = password_service_no_pepper.hash_password(password)
+
+    assert password_service_no_pepper.verify_password(password, hashed) is True
+
+
+def test_verify_password_wrong(password_service_no_pepper):
+    password = "strongpass123"
+    wrong_password = "wrongpass123"
+    hashed = password_service_no_pepper.hash_password(password)
+
+    assert password_service_no_pepper.verify_password(wrong_password, hashed) is False
+
+
+def test_verify_password_invalid_inputs(password_service_no_pepper):
+    with pytest.raises(ValueError) as exc:
+        password_service_no_pepper.verify_password("", "")
+    assert str(exc.value) == ERROR_MESSAGES["INVALID_PASSWORD_INPUTS"]

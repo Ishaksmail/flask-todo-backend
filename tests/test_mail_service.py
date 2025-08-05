@@ -1,25 +1,20 @@
-import os
-
 import pytest
+import os
 from app.services.mail_service import MailService
-from dotenv import load_dotenv
 
-load_dotenv()
-
-@pytest.fixture
-def mail_service():
-    
-    return MailService(
+@pytest.mark.integration
+def test_send_real_email():
+    mail_service = MailService(
         host=os.getenv("EMAIL_HOST"),
-        port=os.getenv("EMAIL_PORT"),
+        port=int(os.getenv("EMAIL_PORT")),
         username=os.getenv("EMAIL_HOST_USER"),
         password=os.getenv("EMAIL_HOST_PASSWORD")
     )
 
-def test_send_email(mail_service):
     result = mail_service.send_email(
-        subject="اختبار",
-        receivers=["test@example.com"],
-        message="هذه رسالة اختبارية"
+        subject="Test Email from Pytest",
+        receivers=["your_inbox_email@inbox.mailtrap.io"],
+        message="This is a real test email sent via Mailtrap SMTP."
     )
-    assert result is True or False
+
+    assert result is True

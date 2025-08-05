@@ -1,110 +1,122 @@
 import pytest
-from datetime import datetime, timedelta
 from unittest.mock import MagicMock
-
 from app.use_cases.users.verified_email_usecase import VerifiedEmailUseCase
-from app.domain.entities.verified_email_token_entity import VerifiedEmailTokenEntity
+from app.constants.error_messages import ERROR_MESSAGES
+
+
+class MockToken:
+    def __init__(self, id=1, email_id=10, token_hash="hashed_token"):
+        self.id = id
+        self.email_id = email_id
+        self.token_hash = token_hash
 
 
 @pytest.fixture
-def mock_user_repo():
-    return MagicMock()
+def setup_dependencies():
+    user_repo = MagicMock()
+    token_service = MagicMock()
+    return user_repo, token_service
 
 
-@pytest.fixture
-def mock_token_service():
-    return MagicMock()
+def test_execute_success(setup_dependencies):
+    user_repo, token_service = setup_dependencies
 
-
-@pytest.fixture
-def verified_email_usecase(mock_user_repo, mock_token_service):
-    return VerifiedEmailUseCase(mock_user_repo, mock_token_service)
-
-
-def test_execute_success(verified_email_usecase, mock_user_repo, mock_token_service):
-    # بيانات وهمية
     raw_token = "valid_token"
     payload = {
         "email": "test@example.com",
         "user_id": 1,
-        "type": "verify_email",
-        "exp": datetime.utcnow() + timedelta(hours=1)
+        "type": "verify_email"
     }
 
-    token_entity = VerifiedEmailTokenEntity(
-        id=1,
-        token_hash="hashed_token",
-        is_used=False,
-        expires_at=datetime.utcnow() + timedelta(hours=1),
-        created_at=datetime.utcnow(),
-        used_at=None,
-        email_id=10,
-        user_id=1
-    )
+    stored_token = MockToken()
 
-    # إعداد الموك
-    mock_token_service.verify_token.return_value = payload
-    mock_user_repo.get_verified_email_token.return_value = token_entity
-    mock_token_service.match_token_hash.return_value = True
+    token_service.verify_token.return_value = payload
+    user_repo.get_verified_email_token.return_value = stored_token
+    token_service.match_token_hash.return_value = True
 
-    # تنفيذ
-    result = verified_email_usecase.execute(raw_token)
+    usecase = VerifiedEmailUseCase(user_repo, token_service)
+    result = usecase.execute(raw_token)
 
-    # تحقق
-    assert result["message"] == "تم تأكيد البريد الإلكتروني بنجاح"
-    mock_token_service.verify_token.assert_called_once_with(raw_token)
-    mock_user_repo.get_verified_email_token.assert_called_once_with(payload["email"])
-    mock_token_service.match_token_hash.assert_called_once()
+    assert result["message"] == ERROR_MESSAGES["EMAIL_VERIFIED_SUCCESS"]
+    token_service.verify_token.assert_called_once_with(raw_token)
+    user_repo.get_verified_email_token.assert_called_once_with(payload["email"])
+    token_service.match_token_hash.assert_called_once_with(raw_token, stored_token.token_hash)
+    user_repo.confirm_email.assert_called_once_with(email_id=stored_token.email_id, token_id=stored_token.id)
 
 
-def test_execute_invalid_token(verified_email_usecase, mock_token_service):
-    mock_token_service.verify_token.return_value = None
-    with pytest.raises(ValueError, match="رمز التأكيد غير صالح أو منتهي الصلاحية"):
-        verified_email_usecase.execute("invalid_token")
+def test_missing_verification_token_raises_error(setup_dependencies):
+    user_repo, token_service = setup_dependencies
+    usecase = VerifiedEmailUseCase(user_repo, token_service)
+
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("")
+    assert str(exc.value) == ERROR_MESSAGES["MISSING_VERIFICATION_TOKEN"]
 
 
-def test_execute_wrong_type(verified_email_usecase, mock_token_service):
-    mock_token_service.verify_token.return_value = {
+def test_invalid_or_expired_token_raises_error(setup_dependencies):
+    user_repo, token_service = setup_dependencies
+    token_service.verify_token.return_value = None
+
+    usecase = VerifiedEmailUseCase(user_repo, token_service)
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("invalid_token")
+    assert str(exc.value) == ERROR_MESSAGES["INVALID_OR_EXPIRED_TOKEN"]
+
+
+def test_invalid_token_type_raises_error(setup_dependencies):
+    user_repo, token_service = setup_dependencies
+    token_service.verify_token.return_value = {
         "email": "test@example.com",
         "user_id": 1,
         "type": "reset_password"
     }
-    with pytest.raises(ValueError, match="نوع التوكن غير صالح لهذه العملية"):
-        verified_email_usecase.execute("token")
+
+    usecase = VerifiedEmailUseCase(user_repo, token_service)
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("token")
+    assert str(exc.value) == ERROR_MESSAGES["INVALID_TOKEN_TYPE"]
 
 
-def test_execute_no_stored_token(verified_email_usecase, mock_user_repo, mock_token_service):
-    payload = {
+def test_missing_token_data_raises_error(setup_dependencies):
+    user_repo, token_service = setup_dependencies
+    token_service.verify_token.return_value = {
+        "email": "",
+        "user_id": None,
+        "type": "verify_email"
+    }
+
+    usecase = VerifiedEmailUseCase(user_repo, token_service)
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("token")
+    assert str(exc.value) == ERROR_MESSAGES["MISSING_TOKEN_DATA"]
+
+
+def test_verification_token_not_found_raises_error(setup_dependencies):
+    user_repo, token_service = setup_dependencies
+    token_service.verify_token.return_value = {
         "email": "test@example.com",
         "user_id": 1,
         "type": "verify_email"
     }
-    mock_token_service.verify_token.return_value = payload
-    mock_user_repo.get_verified_email_token.return_value = None
+    user_repo.get_verified_email_token.return_value = None
 
-    with pytest.raises(ValueError, match="لم يتم العثور على رمز صالح لهذا البريد الإلكتروني"):
-        verified_email_usecase.execute("token")
+    usecase = VerifiedEmailUseCase(user_repo, token_service)
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("token")
+    assert str(exc.value) == ERROR_MESSAGES["VERIFICATION_TOKEN_NOT_FOUND"]
 
 
-def test_execute_hash_mismatch(verified_email_usecase, mock_user_repo, mock_token_service):
-    payload = {
+def test_token_mismatch_raises_error(setup_dependencies):
+    user_repo, token_service = setup_dependencies
+    token_service.verify_token.return_value = {
         "email": "test@example.com",
         "user_id": 1,
         "type": "verify_email"
     }
-    token_entity = VerifiedEmailTokenEntity(
-        id=1,
-        token_hash="wrong_hash",
-        is_used=False,
-        expires_at=datetime.utcnow() + timedelta(hours=1),
-        created_at=datetime.utcnow(),
-        used_at=None,
-        email_id=10,
-        user_id=1
-    )
-    mock_token_service.verify_token.return_value = payload
-    mock_user_repo.get_verified_email_token.return_value = token_entity
-    mock_token_service.match_token_hash.return_value = False
+    user_repo.get_verified_email_token.return_value = MockToken()
+    token_service.match_token_hash.return_value = False
 
-    with pytest.raises(ValueError, match="رمز التأكيد لا يطابق السجل المخزن"):
-        verified_email_usecase.execute("token")
+    usecase = VerifiedEmailUseCase(user_repo, token_service)
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("token")
+    assert str(exc.value) == ERROR_MESSAGES["TOKEN_MISMATCH"]

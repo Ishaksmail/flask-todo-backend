@@ -1,5 +1,6 @@
-from app.repositories.user_repository import UserRepository
-from app.services.token_service import TokenService
+from ...repositories.user_repository import UserRepository
+from ...services.token_service import TokenService
+from ...constants.error_messages import ERROR_MESSAGES
 
 
 class VerifiedEmailUseCase:
@@ -8,36 +9,37 @@ class VerifiedEmailUseCase:
         self.token_service = token_service
 
     def execute(self, raw_token: str):
-        
+        # 1️⃣ Validate token input
         if not raw_token:
-            raise ValueError("رمز التأكيد مفقود")
+            raise ValueError(ERROR_MESSAGES["MISSING_VERIFICATION_TOKEN"])
 
-        
+        # 2️⃣ Verify token validity
         payload = self.token_service.verify_token(raw_token)
         if not payload:
-            raise ValueError("رمز التأكيد غير صالح أو منتهي الصلاحية")
+            raise ValueError(ERROR_MESSAGES["INVALID_OR_EXPIRED_TOKEN"])
 
+        # 3️⃣ Ensure token type is for email verification
         if payload.get("type") != "verify_email":
-            raise ValueError("نوع التوكن غير صالح لهذه العملية")
+            raise ValueError(ERROR_MESSAGES["INVALID_TOKEN_TYPE"])
 
         email = payload.get("email")
         user_id = payload.get("user_id")
         if not email or not user_id:
-            raise ValueError("بيانات التوكن غير كاملة")
+            raise ValueError(ERROR_MESSAGES["MISSING_TOKEN_DATA"])
 
-        
+        # 4️⃣ Retrieve stored token
         stored_token = self.user_repo.get_verified_email_token(email)
         if not stored_token:
-            raise ValueError("لم يتم العثور على رمز صالح لهذا البريد الإلكتروني")
+            raise ValueError(ERROR_MESSAGES["VERIFICATION_TOKEN_NOT_FOUND"])
 
-        
+        # 5️⃣ Match token hash
         if not self.token_service.match_token_hash(raw_token, stored_token.token_hash):
-            raise ValueError("رمز التأكيد لا يطابق السجل المخزن")
+            raise ValueError(ERROR_MESSAGES["TOKEN_MISMATCH"])
 
-        
+        # 6️⃣ Confirm email
         self.user_repo.confirm_email(
             email_id=stored_token.email_id,
             token_id=stored_token.id
         )
 
-        return {"message": "تم تأكيد البريد الإلكتروني بنجاح"}
+        return {"message": ERROR_MESSAGES["EMAIL_VERIFIED_SUCCESS"]}

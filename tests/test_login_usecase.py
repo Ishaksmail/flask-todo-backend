@@ -4,7 +4,7 @@ from datetime import datetime
 from app.use_cases.users.login_usecase import LoginUseCase
 from app.domain.entities.email_entity import EmailEntity
 from app.domain.entities.user_entity import UserEntity
-
+from app.constants.error_messages import ERROR_MESSAGES
 
 class MockUserRepository:
     def __init__(self, user=None):
@@ -57,7 +57,7 @@ def test_login_wrong_username(sample_user):
     hashing = MockHashingService()
     usecase = LoginUseCase(repo, hashing, token_service=None)
 
-    with pytest.raises(ValueError, match="اسم المستخدم أو كلمة المرور غير صحيحة"):
+    with pytest.raises(ValueError, match=ERROR_MESSAGES["INVALID_CREDENTIALS"]):
         usecase.execute("wronguser", "correct_password")
 
 
@@ -66,7 +66,7 @@ def test_login_wrong_password(sample_user):
     hashing = MockHashingService()
     usecase = LoginUseCase(repo, hashing, token_service=None)
 
-    with pytest.raises(ValueError, match="اسم المستخدم أو كلمة المرور غير صحيحة"):
+    with pytest.raises(ValueError, match=ERROR_MESSAGES["INVALID_CREDENTIALS"]):
         usecase.execute("testuser", "wrong_password")
 
 
@@ -82,7 +82,7 @@ def test_login_no_primary_email():
     hashing = MockHashingService()
     usecase = LoginUseCase(repo, hashing, token_service=None)
 
-    with pytest.raises(ValueError, match="لا يوجد بريد إلكتروني أساسي نشط"):
+    with pytest.raises(ValueError, match=ERROR_MESSAGES["NO_ACTIVE_PRIMARY_EMAIL"]):
         usecase.execute("testuser", "correct_password")
 
 
@@ -92,5 +92,5 @@ def test_login_email_not_verified(sample_user):
     hashing = MockHashingService()
     usecase = LoginUseCase(repo, hashing, token_service=None)
 
-    with pytest.raises(ValueError, match="يجب تأكيد البريد الإلكتروني"):
+    with pytest.raises(ValueError, match=ERROR_MESSAGES["EMAIL_NOT_VERIFIED"]):
         usecase.execute("testuser", "correct_password")

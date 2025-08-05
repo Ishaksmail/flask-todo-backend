@@ -1,13 +1,13 @@
-from datetime import datetime, timedelta,timezone
+from datetime import datetime, timedelta, timezone
 
-from app.domain.entities.email_entity import EmailEntity
-from app.domain.entities.user_entity import UserEntity
-from app.domain.entities.verified_email_token_entity import \
-    VerifiedEmailTokenEntity
-from app.repositories.user_repository import UserRepository
-from app.services.mail_service import MailService
-from app.services.password_hashing_service import PasswordHashingService
-from app.services.token_service import TokenService
+from ...domain.entities.email_entity import EmailEntity
+from ...domain.entities.user_entity import UserEntity
+from ...domain.entities.verified_email_token_entity import VerifiedEmailTokenEntity
+from ...repositories.user_repository import UserRepository
+from ...services.mail_service import MailService
+from ...services.password_hashing_service import PasswordHashingService
+from ...services.token_service import TokenService
+from ...constants.error_messages import ERROR_MESSAGES
 
 
 class RegisterUserUseCase:
@@ -16,7 +16,7 @@ class RegisterUserUseCase:
                  hashing_service: PasswordHashingService,
                  token_service: TokenService,
                  mail_service: MailService,
-                base_url:str):
+                 base_url: str):
         self.user_repo = user_repo
         self.hashing_service = hashing_service
         self.token_service = token_service
@@ -24,14 +24,14 @@ class RegisterUserUseCase:
         self.base_url = base_url
 
     def execute(self, username: str, email: str, password: str):
-        # 1️⃣ التحقق من المدخلات
+        # 1️⃣ Validate inputs
         if not username or not email or not password:
-            raise ValueError("جميع الحقول مطلوبة")
+            raise ValueError(ERROR_MESSAGES["ALL_FIELDS_REQUIRED"])
 
-        # 2️⃣ تشفير كلمة المرور
+        # 2️⃣ Hash password
         hashed_password = self.hashing_service.hash_password(password)
 
-        # 3️⃣ إنشاء المستخدم الجديد
+        # 3️⃣ Create new user entity
         new_user = UserEntity(
             username=username,
             password=hashed_password,
@@ -40,15 +40,15 @@ class RegisterUserUseCase:
                 EmailEntity(
                     email_address=email,
                     is_primary=True,
-                    user_id=None  # يملأ بعد إنشاء المستخدم
+                    user_id=None  # Will be filled after user creation
                 )
             ]
         )
 
-        # 4️⃣ حفظ المستخدم
+        # 4️⃣ Save user
         created_user = self.user_repo.create_user(new_user)
 
-        # 5️⃣ إنشاء توكن لتأكيد البريد الإلكتروني
+        # 5️⃣ Generate email verification token
         raw_token, token_hash, expires = self.token_service.generate_token(
             email=email,
             user_id=created_user.id,
@@ -56,7 +56,7 @@ class RegisterUserUseCase:
             expires_delta=timedelta(hours=24)
         )
 
-        # 6️⃣ تخزين التوكن في قاعدة البيانات
+        # 6️⃣ Store token
         token_entity = VerifiedEmailTokenEntity(
             token_hash=token_hash,
             is_used=False,
@@ -67,15 +67,17 @@ class RegisterUserUseCase:
         )
         self.user_repo.create_verified_email_token(token_entity)
 
-        # 7️⃣ إرسال رسالة تأكيد
+        # 7️⃣ Send verification email
         verification_link = f"{self.base_url}/verify-email?token={raw_token}"
         self.mail_service.send_email(
-            subject="تأكيد البريد الإلكتروني",
+            subject="Verify Your Email",
             receivers=[email],
-            message=f"مرحباً {username},\n\nيرجى تأكيد بريدك الإلكتروني عبر الرابط التالي:\n{verification_link}\n\nهذا الرابط صالح لمدة 24 ساعة."
+            message=(
+                f"Hello {username},\n\n"
+                f"Please verify your email by clicking the following link:\n"
+                f"{verification_link}\n\n"
+                f"This link is valid for 24 hours."
+            )
         )
 
-        return {
-            "message": "تم إنشاء الحساب بنجاح. تحقق من بريدك الإلكتروني لتأكيد الحساب.",
-            "user_id": created_user.id
-        }
+        return created_user

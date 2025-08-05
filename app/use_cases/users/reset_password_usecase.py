@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
 
-from app.repositories.user_repository import UserRepository
-from app.services.password_hashing_service import PasswordHashingService
-from app.services.token_service import TokenService
+from ...repositories.user_repository import UserRepository
+from ...services.password_hashing_service import PasswordHashingService
+from ...services.token_service import TokenService
+from ...constants.error_messages import ERROR_MESSAGES
 
 
 class ResetPasswordUseCase:
@@ -15,42 +16,44 @@ class ResetPasswordUseCase:
         self.hashing_service = hashing_service
 
     def execute(self, raw_token: str, new_password: str):
-        # 1️⃣ التحقق من الإدخالات
+        # 1️⃣ Validate inputs
         if not raw_token:
-            raise ValueError("رمز إعادة التعيين مفقود")
-        if not new_password or len(new_password) < 6:
-            raise ValueError("كلمة المرور الجديدة غير صالحة، يجب أن تكون 6 أحرف على الأقل")
+            raise ValueError(ERROR_MESSAGES["MISSING_RESET_TOKEN"])
+        if not new_password or len(new_password) < 8:
+            raise ValueError(ERROR_MESSAGES["INVALID_NEW_PASSWORD"])
 
-        # 2️⃣ التحقق من صحة التوكن (JWT)
+        # 2️⃣ Verify token
         payload = self.token_service.verify_token(raw_token)
         if not payload:
-            raise ValueError("رمز إعادة تعيين كلمة المرور غير صالح أو منتهي الصلاحية")
+            raise ValueError(ERROR_MESSAGES["INVALID_OR_EXPIRED_TOKEN"])
 
-        # 3️⃣ التحقق من أن التوكن مخصص لإعادة تعيين كلمة المرور
+        # 3️⃣ Check token type
         if payload.get("type") != "reset_password":
-            raise ValueError("نوع التوكن غير صالح لهذه العملية")
+            raise ValueError(ERROR_MESSAGES["INVALID_TOKEN_TYPE"])
 
         token_hash = self.token_service._hash_token(raw_token)
         stored_token = self.user_repo.get_password_reset_token(token_hash)
 
         if not stored_token:
-            raise ValueError("لم يتم العثور على رمز صالح لإعادة تعيين كلمة المرور")
+            raise ValueError(ERROR_MESSAGES["TOKEN_NOT_FOUND"])
 
         if stored_token.is_used:
-            raise ValueError("تم استخدام هذا الرمز بالفعل")
+            raise ValueError(ERROR_MESSAGES["TOKEN_ALREADY_USED"])
 
-        # 4️⃣ تحديث كلمة المرور
+        # 4️⃣ Update password
         hashed_password = self.hashing_service.hash_password(new_password)
-        
-        user = self.user_repo.update_password(id=stored_token.user_id,new_password_hashing=hashed_password)
-        
+        user = self.user_repo.update_password(
+            id=stored_token.user_id,
+            new_password_hashing=hashed_password
+        )
         if not user:
-            raise ValueError("المستخدم غير موجود")
+            raise ValueError(ERROR_MESSAGES["USER_NOT_FOUND"])
 
-        # 5️⃣ تأكيد استخدام التوكن
-        confirmed_token = self.user_repo.confirm_password_reset_token(token_id=stored_token.id)
-
+        # 5️⃣ Confirm token usage
+        confirmed_token = self.user_repo.confirm_password_reset_token(
+            token_id=stored_token.id
+        )
         if not confirmed_token:
-            raise ValueError("لم يتم العثور على الرمز أو تم استخدامه بالفعل")
+            raise ValueError(ERROR_MESSAGES["TOKEN_CONFIRMATION_FAILED"])
 
         return True

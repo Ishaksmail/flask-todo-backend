@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
+from ..constants.error_messages import ERROR_MESSAGES
 from ..domain.entities.group_entity import GroupEntity
 from ..domain.entities.task_entity import TaskEntity
 from ..infrastructure.database.models import Group, Task
@@ -13,18 +14,21 @@ from ._decorator import handle_db_errors
 class GroupRepository(IGroupRepository):
     def __init__(self, session: Session):
         self.session = session
+
     @handle_db_errors
     def get_groups(self, user_id: int) -> List[GroupEntity]:
-        
         db_groups = self.session.query(Group).filter(
             Group.user_id == user_id,
             Group.is_deleted == False
         ).order_by(Group.created_at.desc()).all()
+
+        if not db_groups:
+            raise ValueError(ERROR_MESSAGES["GROUP_NOT_FOUND"])
         
         return [self._convert_to_group_entity(group) for group in db_groups]
+
     @handle_db_errors
     def get_groups_uncomplete(self, user_id: int) -> List[GroupEntity]:
-        
         db_groups = self.session.query(Group).filter(
             Group.user_id == user_id,
             Group.is_deleted == False,
@@ -33,11 +37,14 @@ class GroupRepository(IGroupRepository):
                 Task.is_deleted == False
             )
         ).order_by(Group.created_at.desc()).all()
-        
+
+        if not db_groups:
+            raise ValueError(ERROR_MESSAGES["GROUP_NOT_FOUND"])
+
         return [self._convert_to_group_entity(group, include_tasks=True) for group in db_groups]
+
     @handle_db_errors
     def get_groups_complete(self, user_id: int) -> List[GroupEntity]:
-        
         db_groups = self.session.query(Group).filter(
             Group.user_id == user_id,
             Group.is_deleted == False,
@@ -46,65 +53,66 @@ class GroupRepository(IGroupRepository):
                 Task.is_deleted == False
             )
         ).order_by(Group.created_at.desc()).all()
-        
+
+        if not db_groups:
+            raise ValueError(ERROR_MESSAGES["GROUP_NOT_FOUND"])
+
         return [self._convert_to_group_entity(group, include_tasks=True) for group in db_groups]
+
     @handle_db_errors
     def create_group(self, group: GroupEntity) -> GroupEntity:
-        
-      
         db_group = Group(
             name=group.name,
             description=group.description,
             user_id=group.user_id,
             created_at=group.created_at or datetime.now(timezone.utc)
         )
-        
+
         self.session.add(db_group)
         self.session.commit()
         self.session.refresh(db_group)
-        
+
         return self._convert_to_group_entity(db_group)
+
     @handle_db_errors
     def update_group(self, group: GroupEntity) -> Optional[GroupEntity]:
-      
         db_group = self.session.query(Group).filter(
             Group.id == group.id,
             Group.is_deleted == False
         ).first()
-        
+
         if not db_group:
-            return None
-            
+            raise ValueError(ERROR_MESSAGES["GROUP_NOT_FOUND"])
+
         db_group.name = group.name
         db_group.description = group.description
         db_group.updated_at = datetime.now(timezone.utc)
-        
+
         self.session.commit()
         return self._convert_to_group_entity(db_group)
+
     @handle_db_errors
     def delete_group(self, group_id: int) -> bool:
-       
         db_group = self.session.query(Group).filter(
             Group.id == group_id,
             Group.is_deleted == False
         ).first()
-        
+
         if not db_group:
-            return False
-            
+            raise ValueError(ERROR_MESSAGES["GROUP_NOT_FOUND"])
+
         db_group.is_deleted = True
         db_group.deleted_at = datetime.now(timezone.utc)
-        
+
         for task in db_group.tasks:
             task.is_deleted = True
             task.deleted_at = datetime.now(timezone.utc)
-        
+
         self.session.commit()
         return True
-    
-    # الدوال المساعدة
+
+    # Helper functions
     def _convert_to_task_entity(self, db_task: Task) -> TaskEntity:
-       
         return TaskEntity(
             id=db_task.id,
             text=db_task.text,
@@ -119,15 +127,14 @@ class GroupRepository(IGroupRepository):
         )
 
     def _convert_to_group_entity(self, db_group: Group, include_tasks: bool = False) -> GroupEntity:
-        
         tasks = []
         if include_tasks:
             tasks = [
-                self._convert_to_task_entity(task) 
-                for task in db_group.tasks 
+                self._convert_to_task_entity(task)
+                for task in db_group.tasks
                 if not task.is_deleted
             ]
-        
+
         return GroupEntity(
             id=db_group.id,
             name=db_group.name,

@@ -1,129 +1,137 @@
 import pytest
-from datetime import datetime, timedelta, timezone
-from types import SimpleNamespace
-
+from unittest.mock import MagicMock
 from app.use_cases.users.reset_password_usecase import ResetPasswordUseCase
+from app.constants.error_messages import ERROR_MESSAGES
+
+
+class MockToken:
+    def __init__(self, id=1, user_id=10, is_used=False):
+        self.id = id
+        self.user_id = user_id
+        self.is_used = is_used
 
 
 @pytest.fixture
-def mock_user_repo(mocker):
-    return mocker.Mock()
+def setup_dependencies():
+    user_repo = MagicMock()
+    token_service = MagicMock()
+    hashing_service = MagicMock()
 
-@pytest.fixture
-def mock_token_service(mocker):
-    return mocker.Mock()
-
-@pytest.fixture
-def mock_hashing_service(mocker):
-    service = mocker.Mock()
-    service.hash_password.return_value = "hashed_new_password"
-    return service
-
-@pytest.fixture
-def usecase(mock_user_repo, mock_token_service, mock_hashing_service):
-    return ResetPasswordUseCase(
-        user_repo=mock_user_repo,
-        token_service=mock_token_service,
-        hashing_service=mock_hashing_service
-    )
+    return user_repo, token_service, hashing_service
 
 
-# ✅ اختبار النجاح
-def test_reset_password_success(usecase, mock_user_repo, mock_token_service):
-    raw_token = "valid_token"
-    payload = {"type": "reset_password", "user_id": 1}
-    stored_token = SimpleNamespace(
-        id=1,
-        user_id=1,
-        is_used=False,
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=30)
-    )
+def test_reset_password_success(setup_dependencies):
+    user_repo, token_service, hashing_service = setup_dependencies
 
-    mock_token_service.verify_token.return_value = payload
-    mock_token_service._hash_token.return_value = "hashed_token"
-    mock_user_repo.get_password_reset_token.return_value = stored_token
+    token_service.verify_token.return_value = {"type": "reset_password", "user_id": 10}
+    token_service._hash_token.return_value = "hashed_token_123"
+    user_repo.get_password_reset_token.return_value = MockToken()
+    hashing_service.hash_password.return_value = "hashed_new_password"
+    user_repo.update_password.return_value = {"id": 10}
+    user_repo.confirm_password_reset_token.return_value = True
 
-    updated_user = SimpleNamespace(id=1, password="old_password")
-    mock_user_repo.update_password.return_value = updated_user
-
-    confirmed_token = SimpleNamespace(id=1, is_used=True, used_at=datetime.now(timezone.utc))
-    mock_user_repo.confirm_password_reset_token.return_value = confirmed_token
-
-    result = usecase.execute(raw_token, "new_secure_password")
+    usecase = ResetPasswordUseCase(user_repo, token_service, hashing_service)
+    result = usecase.execute("valid_raw_token", "NewPassword123")
 
     assert result is True
-    mock_user_repo.update_password.assert_called_once_with(
-        id=1,
-        new_password_hashing="hashed_new_password"
-    )
-    mock_user_repo.confirm_password_reset_token.assert_called_once_with(token_id=1)
+    token_service.verify_token.assert_called_once_with("valid_raw_token")
+    hashing_service.hash_password.assert_called_once_with("NewPassword123")
+    user_repo.update_password.assert_called_once()
+    user_repo.confirm_password_reset_token.assert_called_once()
 
 
-# ✅ حالات الخطأ
-def test_reset_password_missing_token(usecase):
-    with pytest.raises(ValueError, match="رمز إعادة التعيين مفقود"):
-        usecase.execute("", "new_password")
+def test_missing_token_raises_error(setup_dependencies):
+    user_repo, token_service, hashing_service = setup_dependencies
+    usecase = ResetPasswordUseCase(user_repo, token_service, hashing_service)
+
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("", "NewPassword123")
+    assert str(exc.value) == ERROR_MESSAGES["MISSING_RESET_TOKEN"]
 
 
-def test_reset_password_short_password(usecase):
-    with pytest.raises(ValueError, match="كلمة المرور الجديدة غير صالحة"):
-        usecase.execute("token", "123")
+def test_invalid_new_password_raises_error(setup_dependencies):
+    user_repo, token_service, hashing_service = setup_dependencies
+    usecase = ResetPasswordUseCase(user_repo, token_service, hashing_service)
+
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("valid_token", "short")
+    assert str(exc.value) == ERROR_MESSAGES["INVALID_NEW_PASSWORD"]
 
 
-def test_reset_password_invalid_token(usecase, mock_token_service):
-    mock_token_service.verify_token.return_value = None
-    with pytest.raises(ValueError, match="رمز إعادة تعيين كلمة المرور غير صالح"):
-        usecase.execute("invalid_token", "new_password")
+def test_invalid_or_expired_token_raises_error(setup_dependencies):
+    user_repo, token_service, hashing_service = setup_dependencies
+    token_service.verify_token.return_value = None
+
+    usecase = ResetPasswordUseCase(user_repo, token_service, hashing_service)
+
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("expired_token", "ValidPass123")
+    assert str(exc.value) == ERROR_MESSAGES["INVALID_OR_EXPIRED_TOKEN"]
 
 
-def test_reset_password_wrong_type(usecase, mock_token_service):
-    mock_token_service.verify_token.return_value = {"type": "verify_email"}
-    with pytest.raises(ValueError, match="نوع التوكن غير صالح"):
-        usecase.execute("token", "new_password")
+def test_invalid_token_type_raises_error(setup_dependencies):
+    user_repo, token_service, hashing_service = setup_dependencies
+    token_service.verify_token.return_value = {"type": "wrong_type"}
+
+    usecase = ResetPasswordUseCase(user_repo, token_service, hashing_service)
+
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("valid_token", "ValidPass123")
+    assert str(exc.value) == ERROR_MESSAGES["INVALID_TOKEN_TYPE"]
 
 
-def test_reset_password_token_not_found(usecase, mock_token_service, mock_user_repo):
-    mock_token_service.verify_token.return_value = {"type": "reset_password"}
-    mock_token_service._hash_token.return_value = "hashed_token"
-    mock_user_repo.get_password_reset_token.return_value = None
+def test_token_not_found_raises_error(setup_dependencies):
+    user_repo, token_service, hashing_service = setup_dependencies
+    token_service.verify_token.return_value = {"type": "reset_password"}
+    token_service._hash_token.return_value = "hashed_token_123"
+    user_repo.get_password_reset_token.return_value = None
 
-    with pytest.raises(ValueError, match="لم يتم العثور على رمز صالح"):
-        usecase.execute("token", "new_password")
+    usecase = ResetPasswordUseCase(user_repo, token_service, hashing_service)
 
-
-def test_reset_password_token_already_used(usecase, mock_token_service, mock_user_repo):
-    mock_token_service.verify_token.return_value = {"type": "reset_password"}
-    mock_token_service._hash_token.return_value = "hashed_token"
-    stored_token = SimpleNamespace(user_id=1, is_used=True)
-    mock_user_repo.get_password_reset_token.return_value = stored_token
-
-    with pytest.raises(ValueError, match="تم استخدام هذا الرمز بالفعل"):
-        usecase.execute("token", "new_password")
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("valid_token", "ValidPass123")
+    assert str(exc.value) == ERROR_MESSAGES["TOKEN_NOT_FOUND"]
 
 
-def test_reset_password_user_not_found(usecase, mock_token_service, mock_user_repo):
-    mock_token_service.verify_token.return_value = {"type": "reset_password"}
-    mock_token_service._hash_token.return_value = "hashed_token"
-    stored_token = SimpleNamespace(user_id=1, is_used=False, expires_at=datetime.now(timezone.utc) + timedelta(minutes=30))
-    mock_user_repo.get_password_reset_token.return_value = stored_token
+def test_token_already_used_raises_error(setup_dependencies):
+    user_repo, token_service, hashing_service = setup_dependencies
+    token_service.verify_token.return_value = {"type": "reset_password"}
+    token_service._hash_token.return_value = "hashed_token_123"
+    user_repo.get_password_reset_token.return_value = MockToken(is_used=True)
 
-    mock_user_repo.update_password.return_value = None
+    usecase = ResetPasswordUseCase(user_repo, token_service, hashing_service)
 
-    with pytest.raises(ValueError, match="المستخدم غير موجود"):
-        usecase.execute("token", "new_password")
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("valid_token", "ValidPass123")
+    assert str(exc.value) == ERROR_MESSAGES["TOKEN_ALREADY_USED"]
 
 
-def test_reset_password_confirm_failed(usecase, mock_token_service, mock_user_repo):
-    """حالة فشل تأكيد استخدام التوكن"""
-    mock_token_service.verify_token.return_value = {"type": "reset_password"}
-    mock_token_service._hash_token.return_value = "hashed_token"
-    stored_token = SimpleNamespace(user_id=1, id=1, is_used=False, expires_at=datetime.now(timezone.utc) + timedelta(minutes=30))
-    mock_user_repo.get_password_reset_token.return_value = stored_token
+def test_user_not_found_raises_error(setup_dependencies):
+    user_repo, token_service, hashing_service = setup_dependencies
+    token_service.verify_token.return_value = {"type": "reset_password"}
+    token_service._hash_token.return_value = "hashed_token_123"
+    user_repo.get_password_reset_token.return_value = MockToken()
+    hashing_service.hash_password.return_value = "hashed_new_password"
+    user_repo.update_password.return_value = None
 
-    updated_user = SimpleNamespace(id=1, password="old_password")
-    mock_user_repo.update_password.return_value = updated_user
+    usecase = ResetPasswordUseCase(user_repo, token_service, hashing_service)
 
-    mock_user_repo.confirm_password_reset_token.return_value = None
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("valid_token", "ValidPass123")
+    assert str(exc.value) == ERROR_MESSAGES["USER_NOT_FOUND"]
 
-    with pytest.raises(ValueError, match="لم يتم العثور على الرمز أو تم استخدامه بالفعل"):
-        usecase.execute("token", "new_password")
+
+def test_token_confirmation_failed_raises_error(setup_dependencies):
+    user_repo, token_service, hashing_service = setup_dependencies
+    token_service.verify_token.return_value = {"type": "reset_password"}
+    token_service._hash_token.return_value = "hashed_token_123"
+    user_repo.get_password_reset_token.return_value = MockToken()
+    hashing_service.hash_password.return_value = "hashed_new_password"
+    user_repo.update_password.return_value = {"id": 10}
+    user_repo.confirm_password_reset_token.return_value = None
+
+    usecase = ResetPasswordUseCase(user_repo, token_service, hashing_service)
+
+    with pytest.raises(ValueError) as exc:
+        usecase.execute("valid_token", "ValidPass123")
+    assert str(exc.value) == ERROR_MESSAGES["TOKEN_CONFIRMATION_FAILED"]

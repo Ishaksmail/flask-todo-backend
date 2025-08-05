@@ -1,7 +1,7 @@
 import pytest
 from types import SimpleNamespace
 from app.use_cases.groups.get_group_usecase import GetGroupUseCase
-
+from app.constants.error_messages import ERROR_MESSAGES
 
 @pytest.fixture
 def mock_group_repo(mocker):
@@ -29,7 +29,7 @@ def test_get_all_groups_success(usecase, mock_group_repo):
 
 
 def test_get_all_groups_missing_user_id(usecase):
-    with pytest.raises(ValueError, match="User ID is required"):
+    with pytest.raises(ValueError, match=ERROR_MESSAGES["USER_ID_REQUIRED"]):
         usecase.get_all_groups(None)
 
 
@@ -46,7 +46,7 @@ def test_get_completed_groups_success(usecase, mock_group_repo):
 
 
 def test_get_completed_groups_missing_user_id(usecase):
-    with pytest.raises(ValueError, match="User ID is required"):
+    with pytest.raises(ValueError, match=ERROR_MESSAGES["USER_ID_REQUIRED"]):
         usecase.get_completed_groups(None)
 
 
@@ -63,5 +63,5 @@ def test_get_uncompleted_groups_success(usecase, mock_group_repo):
 
 
 def test_get_uncompleted_groups_missing_user_id(usecase):
-    with pytest.raises(ValueError, match="User ID is required"):
+    with pytest.raises(ValueError, match=ERROR_MESSAGES["USER_ID_REQUIRED"]):
         usecase.get_uncompleted_groups(None)
