@@ -80,16 +80,53 @@ flask run
 
 ---
 
-## 🚀 API Endpoints
+## 📌 **1. Auth Endpoints (`/auth`)**
 
-| Method | Endpoint         | Description       | Auth Required |
-| ------ | ---------------- | ----------------- | ------------- |
-| POST   | `/auth/register` | Register new user | ❌             |
-| POST   | `/auth/login`    | User login        | ❌             |
-| GET    | `/todos`         | Get all todos     | ✅             |
-| POST   | `/todos`         | Create a new todo | ✅             |
-| PUT    | `/todos/<id>`    | Update a todo     | ✅             |
-| DELETE | `/todos/<id>`    | Delete a todo     | ✅             |
+| Method | Endpoint    | Description                  | Auth Required | Body Params                     |
+| ------ | ----------- | ---------------------------- | ------------- | ------------------------------- |
+| POST   | `/register` | Register a new user          | ❌             | `username`, `email`, `password` |
+| POST   | `/login`    | User login                   | ❌             | `username`, `password`          |
+| POST   | `/refresh`  | Refresh access token         | ✅ (Refresh)   | *None*                          |
+| POST   | `/logout`   | Logout and clear JWT cookies | ❌             | *None*                          |
+
+---
+
+## 📌 **2. Group Endpoints (`/api/group`)**
+
+| Method | Endpoint       | Description                | Auth Required | Body Params                                 |
+| ------ | -------------- | -------------------------- | ------------- | ------------------------------------------- |
+| POST   | `/`            | Create a new group         | ✅             | `name` (required), `description` (optional) |
+| GET    | `/`            | Get all groups of the user | ✅             | *None*                                      |
+| GET    | `/completed`   | Get completed groups       | ✅             | *None*                                      |
+| GET    | `/uncompleted` | Get uncompleted groups     | ✅             | *None*                                      |
+| PUT    | `/<group_id>`  | Update a group             | ✅             | `name` (required), `description` (optional) |
+| DELETE | `/<group_id>`  | Soft delete a group        | ✅             | *None*                                      |
+
+---
+
+## 📌 **3. Task Endpoints (`/api/task`)**
+
+| Method | Endpoint                | Description               | Auth Required | Body Params                                                   |
+| ------ | ----------------------- | ------------------------- | ------------- | ------------------------------------------------------------- |
+| POST   | `/`                     | Create a new task         | ✅             | `text` (required), `group_id` (optional), `due_at` (optional) |
+| GET    | `/`                     | Get all tasks of the user | ✅             | *None*                                                        |
+| DELETE | `/<task_id>`            | Delete a task             | ✅             | *None*                                                        |
+| PATCH  | `/complete/<task_id>`   | Mark task as completed    | ✅             | *None*                                                        |
+| PATCH  | `/uncomplete/<task_id>` | Mark task as uncompleted  | ✅             | *None*                                                        |
+
+---
+
+## 📌 **4. User Endpoints (`/api/user`)**
+
+| Method | Endpoint           | Description                            | Auth Required | Body Params             |
+| ------ | ------------------ | -------------------------------------- | ------------- | ----------------------- |
+| POST   | `/forgot-password` | Send password reset link to user email | ❌             | `email`                 |
+| POST   | `/reset-password`  | Reset password using a token           | ❌             | `token`, `new_password` |
+| POST   | `/reset-username`  | Change username                        | ✅             | `new_username`          |
+| POST   | `/email`           | Add a verified email                   | ✅             | `email`                 |
+| POST   | `/verify-email`    | Verify email using a token             | ❌             | `token`                 |
+| GET    | `/isLogin`         | Check if the user is logged in         | ✅ (Optional)  | *None*                  |
+
 
 ---
 
