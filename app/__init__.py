@@ -48,7 +48,7 @@ def create_app():
         allow_headers=["X-CSRF-TOKEN", "Content-Type"])
     
     # إنشاء قاعدة البيانات (يمكن تفعيلها عند الحاجة فقط)
-    # Base.metadata.create_all(bind=engine)
+    #Base.metadata.create_all(bind=engine)
     
     # إعداد الحاوية
     container = Container()

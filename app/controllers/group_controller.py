@@ -7,7 +7,8 @@ from app.use_cases.groups.get_group_usecase import GetGroupUseCase
 from app.use_cases.groups.update_group_usecase import UpdateGroupUseCase
 from dependency_injector.wiring import Provide, inject
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt, jwt_required
+
 from ._decorator import handle_api_exceptions
 
 group_bp = Blueprint('group', __name__, url_prefix='/api/group')
@@ -20,24 +21,20 @@ group_bp = Blueprint('group', __name__, url_prefix='/api/group')
 def create_group(create_usecase: CreateGroupUseCase = Provide[Container.create_group_usecase]):
     """إنشاء مجموعة جديدة"""
     data = request.get_json()
-    
-    # استرجاع الهوية من التوكن (تحوي user_id و username)
-    current_user = get_jwt_identity()
-    user_id = current_user.get("user_id")
+    user_id = get_jwt().get('user_id')
 
     name = data.get("name")
-    description = data.get("description")
-    
-    if not all([name, description, user_id]):
+    description = data.get("description", None)
+
+    if not name:
         return jsonify({"done": False, "message": ERROR_MESSAGES["MISSING_FIELDS"]}), 400
 
     group = create_usecase.execute(name=name, description=description, user_id=user_id)
+    
+    if not group:
+        return jsonify({"done": False, "message": ERROR_MESSAGES["GROUP_NOT_FOUND"]}), 404
 
-    return jsonify({
-        "done": True,
-        "message": SUCCESS_MESSAGES["GROUP_CREATED_SUCCESS"],
-        "group_id": group.id
-    }), 201
+    return jsonify(group.to_dict()), 201
 
 
 @group_bp.route("/<int:group_id>", methods=["DELETE"])
@@ -46,8 +43,11 @@ def create_group(create_usecase: CreateGroupUseCase = Provide[Container.create_g
 @handle_api_exceptions
 def delete_group(group_id, delete_usecase: DeleteGroupUseCase = Provide[Container.delete_group_usecase]):
     """حذف مجموعة (Soft Delete)"""
-    deleted = delete_usecase.execute(group_id)
-    if not deleted:
+    user_id = get_jwt().get('user_id')
+
+    group = delete_usecase.execute(group_id, user_id)
+
+    if not group:
         return jsonify({"done": False, "message": ERROR_MESSAGES["GROUP_NOT_FOUND"]}), 404
 
     return jsonify({"done": True, "message": SUCCESS_MESSAGES["GROUP_DELETED_SUCCESS"]}), 200
@@ -59,14 +59,12 @@ def delete_group(group_id, delete_usecase: DeleteGroupUseCase = Provide[Containe
 @handle_api_exceptions
 def get_all_groups(get_usecase: GetGroupUseCase = Provide[Container.get_group_usecase]):
     """جلب جميع المجموعات للمستخدم"""
-    current_user = get_jwt_identity()
-    user_id = current_user.get("user_id")
-
-    if not user_id:
-        return jsonify({"done": False, "message": ERROR_MESSAGES["USER_ID_REQUIRED"]}), 400
-
+    user_id = get_jwt().get('user_id')
     groups = get_usecase.get_all_groups(user_id)
-    return jsonify([group.__dict__ for group in groups]), 200
+    if not groups:
+        return jsonify({"done": False, "message": ERROR_MESSAGES["GROUP_NOT_FOUND"]}), 404
+    
+    return jsonify([group.to_dict() for group in groups]), 200
 
 
 @group_bp.route("/completed", methods=["GET"])
@@ -75,14 +73,14 @@ def get_all_groups(get_usecase: GetGroupUseCase = Provide[Container.get_group_us
 @handle_api_exceptions
 def get_completed_groups(get_usecase: GetGroupUseCase = Provide[Container.get_group_usecase]):
     """جلب المجموعات المكتملة"""
-    current_user = get_jwt_identity()
-    user_id = current_user.get("user_id")
-
-    if not user_id:
-        return jsonify({"done": False, "message": ERROR_MESSAGES["USER_ID_REQUIRED"]}), 400
+    user_id = get_jwt().get('user_id')
 
     groups = get_usecase.get_completed_groups(user_id)
-    return jsonify([group.__dict__ for group in groups]), 200
+    
+    if not groups:
+        return jsonify({"done": False, "message": ERROR_MESSAGES["GROUP_NOT_FOUND"]}), 404
+    
+    return jsonify([group.to_dict() for group in groups]), 200
 
 
 @group_bp.route("/uncompleted", methods=["GET"])
@@ -91,14 +89,14 @@ def get_completed_groups(get_usecase: GetGroupUseCase = Provide[Container.get_gr
 @handle_api_exceptions
 def get_uncompleted_groups(get_usecase: GetGroupUseCase = Provide[Container.get_group_usecase]):
     """جلب المجموعات غير المكتملة"""
-    current_user = get_jwt_identity()
-    user_id = current_user.get("user_id")
-
-    if not user_id:
-        return jsonify({"done": False, "message": ERROR_MESSAGES["USER_ID_REQUIRED"]}), 400
+    user_id = get_jwt().get('user_id')
 
     groups = get_usecase.get_uncompleted_groups(user_id)
-    return jsonify([group.__dict__ for group in groups]), 200
+    
+    if not groups:
+        return jsonify({"done": False, "message": ERROR_MESSAGES["GROUP_NOT_FOUND"]}), 404
+    
+    return jsonify([group.to_dict() for group in groups]), 200
 
 
 @group_bp.route("/<int:group_id>", methods=["PUT"])
@@ -109,18 +107,16 @@ def update_group(group_id, update_usecase: UpdateGroupUseCase = Provide[Containe
     """تحديث مجموعة"""
     data = request.get_json()
     name = data.get("name")
-    description = data.get("description")
+    description = data.get("description", None)
+    
+    user_id = get_jwt().get('user_id')
 
-    if not all([name, description]):
+    if not name:
         return jsonify({"done": False, "message": ERROR_MESSAGES["MISSING_FIELDS"]}), 400
 
-    updated_group = update_usecase.execute(group_id=group_id, name=name, description=description)
+    group = update_usecase.execute(group_id=group_id, user_id=user_id, name=name, description=description)
 
-    if not updated_group:
+    if not group:
         return jsonify({"done": False, "message": ERROR_MESSAGES["GROUP_NOT_FOUND"]}), 404
 
-    return jsonify({
-        "done": True,
-        "message": SUCCESS_MESSAGES["GROUP_UPDATED_SUCCESS"],
-        "group_id": updated_group.id
-    }), 200
+    return jsonify({"done": True, "message": SUCCESS_MESSAGES["GROUP_UPDATED"], "data": group.__dict__}), 200

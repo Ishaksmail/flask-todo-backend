@@ -2,13 +2,8 @@ from ...interfaces.group_repository_interface import IGroupRepository
 
 
 class DeleteGroupUseCase:
-    def __init__(self, group_repo: IGroupRepository):
-        self.group_repo = group_repo
+    def __init__(self, group_repository: IGroupRepository):
+        self.group_repository = group_repository
 
-    def execute(self, group_id: int) -> bool:
-        """
-        حذف مجموعة معينة (Soft Delete).
-        :param group_id: معرف المجموعة
-        :return: True إذا تم الحذف، False إذا لم يتم العثور على المجموعة
-        """
-        return self.group_repo.delete_group(group_id)
+    def execute(self, group_id: int, user_id:int) -> bool:
+        return self.group_repository.delete_group(group_id,user_id)

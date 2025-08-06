@@ -22,7 +22,7 @@ class IGroupRepository(Protocol):
     def update_group(self,group: GroupEntity) -> Optional[GroupEntity]:
         ...
 
-    def delete_group(self, group_id: int) -> bool:
+    def delete_group(self, group_id: int, user_id:int) -> bool:
         ...
     
     # helper

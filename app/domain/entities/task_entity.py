@@ -25,3 +25,19 @@ class TaskEntity:
         self.created_at = created_at or datetime.now(timezone.utc)
         self.user_id = user_id
         self.group_id = group_id
+        
+        
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "text": self.text,
+            "is_deleted": self.is_deleted,
+            "is_completed": self.is_completed,
+            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "due_at": self.due_at.isoformat() if self.due_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "user_id": self.user_id,
+            "group_id": self.group_id
+        }
+        

@@ -13,7 +13,7 @@ ERROR_MESSAGES = {
     "NO_ACTIVE_PRIMARY_EMAIL": "No active primary email found for this account.",
     "PRIMARY_EMAIL_REQUIRED": "Exactly one primary email is required.",
     "PASSWORD_RESET_LINK_SENT": "Password reset link has been sent to your email.",
-
+    
     # ✅ Password hashing service
     "INVALID_PASSWORD_LENGTH": "Password must be at least 8 characters long.",
     "INVALID_PASSWORD_INPUTS": "Valid password and hashed password are required.",

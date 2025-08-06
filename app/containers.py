@@ -17,6 +17,8 @@ from .use_cases.groups.create_group_usecase import CreateGroupUseCase
 from .use_cases.groups.delete_group_usecase import DeleteGroupUseCase
 from .use_cases.groups.get_group_usecase import GetGroupUseCase
 from .use_cases.groups.update_group_usecase import UpdateGroupUseCase
+
+from .use_cases.tasks.get_tasks_usecase import GetTaskUseCase
 from .use_cases.tasks.create_task_usecase import CreateTaskUseCase
 from .use_cases.tasks.delete_task_usecase import DeleteTaskUseCase
 from .use_cases.tasks.mark_task_completed_usecase import \
@@ -142,26 +144,46 @@ class Container(containers.DeclarativeContainer):
     # --- Tasks ---
     create_task_usecase = providers.Factory(
         CreateTaskUseCase,
-        task_repo=task_repository
+        task_repository=task_repository
     )
 
     delete_task_usecase = providers.Factory(
         DeleteTaskUseCase,
-        task_repo=task_repository
+        task_repository=task_repository
     )
 
     mark_task_completed_usecase = providers.Factory(
         MarkTaskCompletedUseCase,
-        task_repo=task_repository
+        task_repository=task_repository
     )
 
     mark_task_uncompleted_usecase = providers.Factory(
         MarkTaskUncompletedUseCase,
-        task_repo=task_repository
+        task_repository=task_repository
+    )
+    
+    get_task_usecase = providers.Factory(
+        GetTaskUseCase, 
+        task_repository=task_repository    
     )
 
     # --- Groups ---
-    create_group_usecase = providers.Factory(CreateGroupUseCase, group_repo=group_repository)
-    delete_group_usecase = providers.Factory(DeleteGroupUseCase, group_repo=group_repository)
-    get_group_usecase = providers.Factory(GetGroupUseCase, group_repo=group_repository)
-    update_group_usecase = providers.Factory(UpdateGroupUseCase, group_repo=group_repository)
+    create_group_usecase = providers.Factory(
+        CreateGroupUseCase, 
+        group_repository=group_repository
+    )
+    
+    delete_group_usecase = providers.Factory(
+        DeleteGroupUseCase,
+        group_repository=group_repository
+    )
+
+    get_group_usecase = providers.Factory(
+        GetGroupUseCase, 
+        group_repository=group_repository
+    )
+
+    update_group_usecase = providers.Factory(
+        UpdateGroupUseCase, 
+        group_repository=group_repository
+    )

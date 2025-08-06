@@ -10,7 +10,7 @@ def handle_api_exceptions(f):
         except KeyError as e:
             return jsonify({
                 "done": False,
-                "message": f"حقل مفقود: {str(e)}"
+                "message": f"Missing field: {str(e)}"
             }), 400
 
         except ValueError as e:
@@ -28,7 +28,7 @@ def handle_api_exceptions(f):
         except Exception as e:
             return jsonify({
                 "done": False,
-                "message": e
+                "message": str(e) 
             }), 500
     
     return decorated_function

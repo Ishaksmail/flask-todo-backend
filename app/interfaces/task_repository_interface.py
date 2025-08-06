@@ -1,11 +1,14 @@
-from typing import Optional, Protocol
+from typing import List, Optional, Protocol
 
 from app.domain.entities.task_entity import TaskEntity
 from app.infrastructure.database.models import Task
 
 
 class ITaskRepository(Protocol):
-        
+    
+    def get_tasks(slef, user_id: int) -> List[TaskEntity] :
+        ...
+                
     def create_task(self, task: TaskEntity,user_id: int) -> TaskEntity:
         ...
 

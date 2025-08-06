@@ -1,10 +1,10 @@
 from ...domain.entities.task_entity import TaskEntity
-from ...interfaces.task_repository_interface import ITaskRepository
+from ...repositories.task_repository import TaskRepository
 from datetime import datetime, timezone
 
 
 class CreateTaskUseCase:
-    def __init__(self, task_repository: ITaskRepository):
+    def __init__(self, task_repository: TaskRepository):
         self.task_repository = task_repository
 
     def execute(self, text: str, user_id: int, group_id: int = None, due_at=None):

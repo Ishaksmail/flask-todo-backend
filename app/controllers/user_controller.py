@@ -131,23 +131,21 @@ def verify_email(verify_email_usecase: VerifiedEmailUseCase = Provide[Container.
 @user_bp.route("/isLogin", methods=["GET"])
 @jwt_required(optional=True)
 @inject
-def check_login():
-    
-    get_user_usecase=Provide[Container.get_user_usecase]
+def check_login(get_user_usecase=Provide[Container.get_user_usecase]):
     current_user = get_jwt_identity()
     
-    if not current_user:
+        
+    user = get_user_usecase.execute(username=current_user)
+    
+    if not user:
         return jsonify({
             "isLoggedIn": False,
             "message": ERROR_MESSAGES["USER_NOT_FOUND"]
         }), 200
     
-        
-    username = current_user["username"]
-    current_user = get_user_usecase.execute(username=username)
-
+    
     return jsonify({
         "isLoggedIn": True,
         "message": SUCCESS_MESSAGES["LOGIN_SUCCESS"],
-        "username":current_user.username
+        "username":current_user
     }), 200

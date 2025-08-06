@@ -4,8 +4,8 @@ from ...domain.entities.group_entity import GroupEntity
 
 
 class UpdateGroupUseCase:
-    def __init__(self, group_repo: IGroupRepository):
-        self.group_repo = group_repo
+    def __init__(self, group_repository: IGroupRepository):
+        self.group_repository = group_repository
 
     def execute(self, group_id: int, name: str, description: str) -> GroupEntity | None:
         updated_group = GroupEntity(
@@ -20,4 +20,4 @@ class UpdateGroupUseCase:
             tasks=[]
         )
 
-        return self.group_repo.update_group(updated_group)
+        return self.group_repository.update_group(updated_group)
