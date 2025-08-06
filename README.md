@@ -1,9 +1,3 @@
-بما أن مشروعك يستخدم **هيكلة Clean Architecture** (Controllers, Domain, Infrastructure, Repositories, Services, Use Cases)، يمكن تحسين الـ **README.md** ليعكس هذه الهيكلة بوضوح ويُظهر أنك تطبق معايير احترافية في تصميم الـ Backend.
-
-إليك النسخة المعدلة من **README.md**:
-
----
-
 # 📌 Flask Todo API with JWT & Clean Architecture
 
 A **production-ready RESTful Todo API** built with **Flask**, implementing **JWT Authentication**, **PostgreSQL**, and **Clean Architecture principles** for high scalability and maintainability.
