@@ -142,8 +142,3 @@ pytest
 
 Pull requests are welcome. Please ensure code quality and testing before submitting.
 
----
-
-## 📜 License
-
-This project is licensed under the MIT License.
